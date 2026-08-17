@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { logger } from './shared/logger.js';
 import { requestLoggerMiddleware } from './infrastructure/middleware/logging.middleware.js';
 import { errorHandlerMiddleware } from './infrastructure/middleware/error-handler.middleware.js';
+import { authRoutes } from './infrastructure/http/routes/auth.routes.js';
 import { productRoutes } from './infrastructure/http/routes/product.routes.js';
 import { saleRoutes } from './infrastructure/http/routes/sale.routes.js';
 import { reportRoutes } from './infrastructure/http/routes/report.routes.js';
@@ -61,6 +62,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Rotas da API
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/reports', reportRoutes);
