@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "dev:frontend": "cd frontend && npm run dev",
     "build": "prisma generate && tsc",
+    "build:frontend": "cd frontend && npm run build",
+    "build:all": "npm run build && npm run build:frontend",
     "start": "node dist/main.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",

@@ -1,18 +1,41 @@
-FROM node:20-alpine
+# Estagio 1: Build do Frontend (React + Vite)
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
 
+# Estagio 2: Build do Backend (TypeScript + Prisma)
+FROM node:20-alpine AS backend-builder
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci
-
-COPY . .
-
+COPY prisma/ ./prisma/
+COPY prisma.config.ts ./
+COPY tsconfig.json ./
+COPY src/ ./src/
 RUN npm run build
+
+# Estagio 3: Imagem Final de Producao
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY prisma/ ./prisma/
+COPY prisma.config.ts ./
+COPY --from=backend-builder /app/src/generated ./src/generated
+COPY --from=backend-builder /app/dist ./dist
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 USER node
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s CMD node dist/health.js || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 CMD ["node", "dist/main.js"]

@@ -1,4 +1,6 @@
 import 'express-async-errors';
+import path from 'node:path';
+import fs from 'node:fs';
 import express from 'express';
 import type { Request, Response } from 'express';
 import helmet from 'helmet';
@@ -21,7 +23,7 @@ app.use(express.json());
 app.use(requestLoggerMiddleware);
 
 // Seguranca HTTP
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env['CORS_ORIGIN']?.split(',') ?? '*' }));
 
 // Limitador de Taxa de Requisicoes
@@ -66,6 +68,22 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/reports', reportRoutes);
+
+// Servir Frontend em Producao (SPA Fallback)
+const frontendDistPath = path.resolve(process.cwd(), 'frontend', 'dist');
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req: Request, res: Response, next) => {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/api-docs') ||
+      req.path.startsWith('/health')
+    ) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
 
 // Middleware Global de Erros
 app.use(errorHandlerMiddleware);
