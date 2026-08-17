@@ -11,6 +11,7 @@ import { requestLoggerMiddleware } from './infrastructure/middleware/logging.mid
 import { errorHandlerMiddleware } from './infrastructure/middleware/error-handler.middleware.js';
 import { productRoutes } from './infrastructure/http/routes/product.routes.js';
 import { saleRoutes } from './infrastructure/http/routes/sale.routes.js';
+import { reportRoutes } from './infrastructure/http/routes/report.routes.js';
 
 const app = express();
 app.use(express.json());
@@ -62,6 +63,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // Rotas da API
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Middleware Global de Erros
 app.use(errorHandlerMiddleware);

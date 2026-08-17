@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/main.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
@@ -19,6 +19,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "prepare": "husky",
+    "postinstall": "prisma generate",
     "precommit": "lint-staged",
     "prepush": "npm run test"
   },
