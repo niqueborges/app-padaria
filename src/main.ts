@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { logger } from './shared/logger.js';
 import { requestLoggerMiddleware } from './infrastructure/middleware/logging.middleware.js';
 import { errorHandlerMiddleware } from './infrastructure/middleware/error-handler.middleware.js';
+import { productRoutes } from './infrastructure/http/routes/product.routes.js';
 
 const app = express();
 app.use(express.json());
@@ -56,6 +57,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Rotas da API
+app.use('/api/products', productRoutes);
 
 // Middleware Global de Erros
 app.use(errorHandlerMiddleware);
