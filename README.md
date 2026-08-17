@@ -75,131 +75,168 @@ docker-compose.yml              # Orquestração local de serviços (API + Postg
 
 ---
 
-## 5. Guia de Reprodução Local
+## 5. Guia Completo de Reprodução Passo a Passo
 
-### 5.1 Pré-requisitos
+Este guia foi elaborado para que qualquer pessoa, mesmo sem experiência prévia no projeto, consiga clonar, configurar e executar a aplicação do zero.
 
-- **Node.js**: Versão 20.x ou superior.
-- **Docker e Docker Compose**: Instalados e em execução.
-- **Git**: Para clonagem do repositório.
+### 5.1 Pré-requisitos Obrigatórios
 
-### 5.2 Passo a Passo de Instalação
+Antes de iniciar, certifique-se de ter instalado em seu computador:
 
-1. **Clonar o Repositório**:
+1. **Node.js** (versão 20 LTS ou superior): [nodejs.org](https://nodejs.org/)
+   - Para verificar no terminal: `node -v` (deve retornar `v20.x.x` ou superior)
+2. **Docker Desktop** (com Docker Compose habilitado): [docker.com](https://www.docker.com/products/docker-desktop/)
+   - Para verificar no terminal: `docker compose version`
+3. **Git**: [git-scm.com](https://git-scm.com/)
+   - Para verificar no terminal: `git --version`
+
+---
+
+### 5.2 Passo 1: Clonar o Repositório
+
+Abra o seu terminal (Bash, Zsh ou PowerShell) e execute:
+
 ```bash
 git clone https://github.com/niqueborges/app-padaria.git
 cd app-padaria
 ```
 
-2. **Instalar Dependências do Backend e Frontend**:
+---
+
+### 5.3 Passo 2: Instalar as Dependências
+
+Instale os pacotes do backend (raiz) e do frontend:
+
 ```bash
-# Dependências da API (backend)
+# 1. Instala as dependências da API Backend na raiz
 npm install
 
-# Dependências da interface (frontend)
+# 2. Instala as dependências da Interface Frontend
 cd frontend
 npm install
 cd ..
 ```
 
-3. **Configurar as Variáveis de Ambiente**:
-```bash
-# Copiar arquivo de exemplo para o .env local
-cp .env.example .env
-```
+---
 
-Conteúdo padrão do `.env`:
-```env
-PORT=3000
-NODE_ENV=development
-DATABASE_URL=postgresql://postgres:dev@localhost:5432/padaria
-JWT_SECRET=dev-secret-change-in-prod-super-secure-key-123456
-JWT_EXPIRES_IN=8h
-CORS_ORIGIN=http://localhost:5173
-LOG_LEVEL=debug
-```
+### 5.4 Passo 3: Configurar as Variáveis de Ambiente
 
-4. **Inicializar o Banco de Dados PostgreSQL**:
+Copie o arquivo de exemplo para criar o seu arquivo `.env` local:
+
+- **No Linux / macOS / Git Bash**:
+  ```bash
+  cp .env.example .env
+  ```
+- **No Windows (PowerShell)**:
+  ```powershell
+  Copy-Item .env.example .env
+  ```
+- **No Windows (Prompt de Comando - CMD)**:
+  ```cmd
+  copy .env.example .env
+  ```
+
+> O arquivo `.env` já vem pré-configurado com as credenciais padrão do banco local e chave JWT de desenvolvimento. Nenhuma alteração manual é necessária para rodar localmente.
+
+---
+
+### 5.5 Passo 4: Subir o Banco de Dados PostgreSQL
+
+Certifique-se de que o **Docker Desktop** está aberto e em execução. Em seguida, inicie o container do PostgreSQL:
+
 ```bash
 docker compose up -d db
 ```
 
-5. **Executar Migrações e Povoamento Inicial (Seed)**:
+> **Verificação**: Execute `docker compose ps`. O serviço `db` deve aparecer com status `running (healthy)`.
+
+---
+
+### 5.6 Passo 5: Executar as Migrações e o Povoamento Inicial (Seed)
+
+Execute as migrações para criar as tabelas no banco de dados e insira os dados iniciais do Pedro e da Maria:
+
 ```bash
-# Aplicar schema no banco de dados
+# Cria as tabelas users, products, sales e sale_items
 npm run prisma:migrate
 
-# Executar seed com usuários (Pedro e Maria) e catálogo inicial de produtos
+# Popula o banco com os operadores e o catálogo inicial de pães e cafés
 npm run prisma:seed
 ```
 
-Credenciais criadas no Seed:
+**Credenciais cadastradas automaticamente:**
 - **Pedro (Dono)**: `pedro@padaria.com` | Senha: `padaria123`
 - **Maria (Esposa)**: `maria@padaria.com` | Senha: `maria123`
 
 ---
 
-## 6. Execução da Aplicação
+## 6. Como Executar a Aplicação
 
-### Modo Desenvolvimento (Backend + Frontend Separados)
+### Opção A: Modo Desenvolvimento (Recomendado para Testar)
 
-Em um terminal, inicie a API:
-```bash
-npm run dev
-```
+Neste modo, você roda o backend e o frontend com recarregamento automático a cada alteração de código.
 
-Em outro terminal, inicie a aplicação web:
-```bash
-npm run dev:frontend
-```
-- Interface Web: `http://localhost:5173`
-- API Backend: `http://localhost:3000`
-- Documentação Swagger: `http://localhost:3000/api-docs`
+1. **Terminal 1 (Backend API)**:
+   ```bash
+   npm run dev
+   ```
+   *Saída esperada:* `[INFO] Servidor rodando na porta 3000`
+
+2. **Terminal 2 (Frontend React)**:
+   ```bash
+   npm run dev:frontend
+   ```
+   *Saída esperada:* `VITE v8.x.x ready in ... ms -> Local: http://localhost:5173/`
+
+**Acessos disponíveis:**
+- **Sistema Web (PDV & Gestão)**: [http://localhost:5173](http://localhost:5173)
+  *(Dica: Na tela de login, clique no botão de atalho "Pedro (Dono)" para entrar imediatamente sem precisar digitar!)*
+- **Documentação Interativa Swagger**: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+- **Healthcheck**: [http://localhost:3000/health](http://localhost:3000/health)
 
 ---
 
-### Modo Produção (Build Unificado)
+### Opção B: Modo Produção Unificado (Single Host)
 
-Para compilar o backend e o frontend simultaneamente e executar em modo integrado:
+Compila o frontend e o backend em arquivos otimizados e roda tudo em uma única porta (`3000`):
+
 ```bash
-# Compila o backend e o bundle do frontend
+# 1. Compila o TypeScript e o bundle do React
 npm run build:all
 
-# Inicia o servidor Node servindo a API e a SPA na porta 3000
+# 2. Inicia o servidor unificado
 npm start
 ```
-- Acesso completo: `http://localhost:3000`
+- Acesse todo o sistema (API + SPA) em: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-### Execução Completa via Docker Compose
+### Opção C: Execução 100% em Containers Docker
+
+Caso queira subir o banco, a API e o frontend já empacotados em containers isolados:
 
 ```bash
-# Constrói as imagens multi-stage e sobe todos os serviços
 docker compose up --build -d
 ```
+- Acesse: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 7. Testes e Qualidade de Código
+## 7. Testes Automatizados e Qualidade de Código
 
-### Executar Testes Unitários
+Para validar que todo o sistema está funcionando e que todas as regras de negócio estão íntegras:
+
 ```bash
+# Executa a suíte de 41 testes unitários com Jest
 npm test
-```
 
-### Executar Testes com Relatório de Cobertura
-```bash
+# Executa os testes com relatório detalhado de cobertura
 npm run test:coverage
-```
 
-### Validar Padrões de Código com ESLint
-```bash
+# Executa o linter ESLint para checar padrões de código
 npm run lint
-```
 
-### Validar Formatação com Prettier
-```bash
+# Verifica a formatação do código com Prettier
 npm run format:check
 ```
 
@@ -207,18 +244,34 @@ npm run format:check
 
 ## 8. Documentação dos Endpoints REST
 
-A documentação OpenAPI interativa completa está disponível em `http://localhost:3000/api-docs`. Abaixo, o resumo dos endpoints principais:
+A documentação interativa com Swagger UI está disponível em `http://localhost:3000/api-docs`. Resumo dos principais endpoints:
 
 | Método | Endpoint | Descrição | Autenticação | Payload / Parâmetros |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Verificação de saúde da aplicação | Público | - |
-| `POST` | `/api/auth/login` | Autenticação de operador e emissão de JWT | Público | `{ email, password }` |
-| `GET` | `/api/auth/me` | Dados do operador autenticado | Bearer JWT | - |
+| `POST` | `/api/auth/login` | Autenticação de operador e emissão de JWT | Público | `{ "email": "...", "password": "..." }` |
+| `GET` | `/api/auth/me` | Dados do operador autenticado | Bearer JWT | Header `Authorization: Bearer <token>` |
 | `GET` | `/api/products` | Listagem de todos os produtos do catálogo | Público | - |
-| `GET` | `/api/products/:id` | Consulta detalhada de produto por ID | Público | `id` (UUID) |
-| `POST` | `/api/products` | Cadastro de novo produto | Público | `{ name, price, stock }` |
-| `PUT` | `/api/products/:id` | Atualização de dados e estoque de produto | Público | `{ name?, price?, stock? }` |
-| `DELETE` | `/api/products/:id` | Remoção de produto do catálogo | Público | `id` (UUID) |
-| `POST` | `/api/sales` | Registro de venda com baixa atômica de estoque | Público | `{ items: [{ productId, quantity }] }` |
+| `GET` | `/api/products/:id` | Consulta detalhada de produto por ID | Público | Parâmetro na URL `id` (UUID) |
+| `POST` | `/api/products` | Cadastro de novo produto | Público | `{ "name": "...", "price": 0.0, "stock": 0 }` |
+| `PUT` | `/api/products/:id` | Atualização de produto e estoque | Público | `{ "name"?: "...", "price"?: 0.0, "stock"?: 0 }` |
+| `DELETE` | `/api/products/:id` | Remoção de produto do catálogo | Público | Parâmetro na URL `id` (UUID) |
+| `POST` | `/api/sales` | Registro de venda com baixa atômica de estoque | Público | `{ "items": [{ "productId": "...", "quantity": 1 }] }` |
 | `GET` | `/api/reports/daily` | Relatório consolidado de vendas do dia | Público | `?date=YYYY-MM-DD` |
 | `GET` | `/api/reports/monthly` | Relatório consolidado de receita mensal | Público | `?year=YYYY&month=MM` |
+
+---
+
+## 9. Resolução de Dúvidas e Problemas Frequentes (Troubleshooting)
+
+### O comando `docker compose up -d db` dá erro de conexão
+- **Causa**: O aplicativo Docker Desktop não está aberto.
+- **Solução**: Abra o Docker Desktop no seu computador, aguarde ele inicializar (ícone verde de status) e rode o comando novamente.
+
+### Erro: `Port 5432 is already in use`
+- **Causa**: Você já possui uma instância do PostgreSQL instalada diretamente no seu sistema operacional rodando na porta 5432.
+- **Solução**: Pare o serviço do PostgreSQL local antes de rodar o Docker Compose, ou altere a porta mapeada em `docker-compose.yml` (ex: `"5433:5432"`) e atualize o `DATABASE_URL` no arquivo `.env`.
+
+### Erro: `Cannot find module '../../generated/prisma/client.js'`
+- **Causa**: Os tipos do Prisma Client ainda não foram gerados no ambiente local.
+- **Solução**: Execute `npx prisma generate` no terminal.
