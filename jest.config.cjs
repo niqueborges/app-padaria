@@ -2,6 +2,10 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/*.spec.ts', '**/*.test.ts'],
+  moduleNameMapper: {
+    '^(\\./.*)\\.js$': '$1',
+    '^(\\.\\./.*)\\.js$': '$1',
+  },
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',

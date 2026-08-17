@@ -1,14 +1,20 @@
 import 'express-async-errors';
 import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import rateLimit from 'express-rate-limit';
+import { logger } from './shared/logger.js';
+import { requestLoggerMiddleware } from './infrastructure/middleware/logging.middleware.js';
+import { errorHandlerMiddleware } from './infrastructure/middleware/error-handler.middleware.js';
 
 const app = express();
 app.use(express.json());
+
+// Observabilidade e Logging HTTP
+app.use(requestLoggerMiddleware);
 
 // Seguranca HTTP
 app.use(helmet());
@@ -52,14 +58,10 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Middleware Global de Erros
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  res.status(500).json({
-    error: process.env['NODE_ENV'] === 'production' ? 'Erro interno no servidor' : err.message,
-  });
-});
+app.use(errorHandlerMiddleware);
 
 const PORT = Number(process.env['PORT']) || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  console.log(`Documentacao Swagger disponivel em http://localhost:${PORT}/api-docs`);
+  logger.info(`Servidor rodando na porta ${PORT}`);
+  logger.info(`Documentacao Swagger disponivel em http://localhost:${PORT}/api-docs`);
 });
