@@ -50,6 +50,60 @@ export class PrismaSaleRepository implements SaleRepositoryPort {
     });
   }
 
+  async createWithStockDeduction(data: CreateSaleData): Promise<Sale> {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Debitar quantidade do estoque de cada produto
+      for (const item of data.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { decrement: item.quantity },
+          },
+        });
+      }
+
+      // 2. Criar a venda e os itens de venda vinculados
+      const raw = await tx.sale.create({
+        data: {
+          totalAmount: data.totalAmount,
+          items: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+          },
+        },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      });
+
+      const items = raw.items.map(
+        (item) =>
+          new SaleItem({
+            id: item.id,
+            saleId: item.saleId,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            productName: item.product?.name,
+          })
+      );
+
+      return new Sale({
+        id: raw.id,
+        totalAmount: raw.totalAmount,
+        createdAt: raw.createdAt,
+        items,
+      });
+    });
+  }
+
   async findAll(): Promise<Sale[]> {
     const records = await this.prisma.sale.findMany({
       include: {

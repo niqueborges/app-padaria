@@ -19,6 +19,7 @@ export interface RevenueReport {
 
 export interface SaleRepositoryPort {
   create(data: CreateSaleData): Promise<Sale>;
+  createWithStockDeduction(data: CreateSaleData): Promise<Sale>;
   findAll(): Promise<Sale[]>;
   findById(id: string): Promise<Sale | null>;
   getDailyRevenue(date: Date): Promise<RevenueReport>;
