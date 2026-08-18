@@ -43,7 +43,8 @@ src/
 ├── infrastructure/             # Camada de Infraestrutura: Detalhes técnicos concretos
 │   ├── database/               # PrismaClient, Driver Adapter PG (@prisma/adapter-pg), Repositórios
 │   ├── http/                   # Controllers, rotas Express e documentação Swagger JSDoc
-│   └── middleware/             # Request Logger (Pino), Error Handler global, AuthMiddleware
+│   ├── middleware/             # Request Logger (Pino), Error Handler global, AuthMiddleware
+│   └── config/                 # (reservado — sem implementação no v1.x)
 ├── shared/                     # Módulos transversais (Logger estruturado, helpers)
 frontend/                       # Aplicação React + Vite + TypeScript (PDV, Estoque, Relatórios)
 Dockerfile                      # Build multi-estágio (Frontend Builder, Backend Builder, Runner)
@@ -136,7 +137,18 @@ Copie o arquivo de exemplo para criar o seu arquivo `.env` local:
   copy .env.example .env
   ```
 
-> O arquivo `.env` já vem pré-configurado com as credenciais padrão do banco local e chave JWT de desenvolvimento. Nenhuma alteração manual é necessária para rodar localmente.
+O arquivo `.env` será criado com as seguintes variáveis pré-configuradas para desenvolvimento local:
+
+```env
+PORT=3000
+NODE_ENV=development
+DATABASE_URL=postgresql://postgres:dev@localhost:5432/padaria
+JWT_SECRET=dev-secret-change-in-prod
+JWT_EXPIRES_IN=8h
+CORS_ORIGIN=http://localhost:5173
+```
+
+> Nenhuma alteração manual é necessária para rodar localmente. Em produção, substitua `JWT_SECRET` por um valor secreto forte e `CORS_ORIGIN` pela URL real do frontend.
 
 ---
 
@@ -154,15 +166,18 @@ docker compose up -d db
 
 ### 5.6 Passo 5: Executar as Migrações e o Povoamento Inicial (Seed)
 
-Execute as migrações para criar as tabelas no banco de dados e insira os dados iniciais do Pedro e da Maria:
+Aplique as migrações para criar as tabelas no banco de dados e insira os dados iniciais do Pedro e da Maria:
 
 ```bash
-# Cria as tabelas users, products, sales e sale_items
-npm run prisma:migrate
+# Aplica as migrations existentes (não interativo, recomendado para clone fresco)
+npx prisma migrate deploy
 
 # Popula o banco com os operadores e o catálogo inicial de pães e cafés
 npm run prisma:seed
 ```
+
+> **Por que `prisma migrate deploy` e não `prisma migrate dev`?**
+> O comando `dev` é interativo e solicita um nome para nova migration — adequado apenas para quando você está criando alterações no schema. Para aplicar migrations já existentes em um clone fresco, `deploy` é o comando correto: silencioso e idempotente.
 
 **Credenciais cadastradas automaticamente:**
 - **Pedro (Dono)**: `pedro@padaria.com` | Senha: `padaria123`
@@ -216,9 +231,19 @@ npm start
 Caso queira subir o banco, a API e o frontend já empacotados em containers isolados:
 
 ```bash
+# 1. Constrói as imagens e sobe todos os serviços em segundo plano
 docker compose up --build -d
+
+# 2. Aguarde o serviço `db` ficar saudável (~10s) e aplique as migrations
+docker compose exec app npx prisma migrate deploy
+
+# 3. Popula o banco com os operadores e o catálogo inicial
+docker compose exec app npm run prisma:seed
 ```
+
 - Acesse: [http://localhost:3000](http://localhost:3000)
+
+> **Verificação**: Execute `docker compose ps`. Os serviços `app` e `db` devem aparecer com status `running (healthy)`.
 
 ---
 
@@ -250,15 +275,17 @@ A documentação interativa com Swagger UI está disponível em `http://localhos
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Verificação de saúde da aplicação | Público | - |
 | `POST` | `/api/auth/login` | Autenticação de operador e emissão de JWT | Público | `{ "email": "...", "password": "..." }` |
-| `GET` | `/api/auth/me` | Dados do operador autenticado | Bearer JWT | Header `Authorization: Bearer <token>` |
-| `GET` | `/api/products` | Listagem de todos os produtos do catálogo | Público | - |
-| `GET` | `/api/products/:id` | Consulta detalhada de produto por ID | Público | Parâmetro na URL `id` (UUID) |
-| `POST` | `/api/products` | Cadastro de novo produto | Público | `{ "name": "...", "price": 0.0, "stock": 0 }` |
-| `PUT` | `/api/products/:id` | Atualização de produto e estoque | Público | `{ "name"?: "...", "price"?: 0.0, "stock"?: 0 }` |
-| `DELETE` | `/api/products/:id` | Remoção de produto do catálogo | Público | Parâmetro na URL `id` (UUID) |
-| `POST` | `/api/sales` | Registro de venda com baixa atômica de estoque | Público | `{ "items": [{ "productId": "...", "quantity": 1 }] }` |
-| `GET` | `/api/reports/daily` | Relatório consolidado de vendas do dia | Público | `?date=YYYY-MM-DD` |
-| `GET` | `/api/reports/monthly` | Relatório consolidado de receita mensal | Público | `?year=YYYY&month=MM` |
+| `GET` | `/api/auth/me` | Dados do operador autenticado | **Bearer JWT** | Header `Authorization: Bearer <token>` |
+| `GET` | `/api/products` | Listagem de todos os produtos do catálogo | Público* | - |
+| `GET` | `/api/products/:id` | Consulta detalhada de produto por ID | Público* | Parâmetro na URL `id` (UUID) |
+| `POST` | `/api/products` | Cadastro de novo produto | Público* | `{ "name": "...", "price": 0.0, "stock": 0 }` |
+| `PUT` | `/api/products/:id` | Atualização de produto e estoque | Público* | `{ "name"?: "...", "price"?: 0.0, "stock"?: 0 }` |
+| `DELETE` | `/api/products/:id` | Remoção de produto do catálogo | Público* | Parâmetro na URL `id` (UUID) |
+| `POST` | `/api/sales` | Registro de venda com baixa atômica de estoque | Público* | `{ "items": [{ "productId": "...", "quantity": 1 }] }` |
+| `GET` | `/api/reports/daily` | Relatório consolidado de vendas do dia | Público* | `?date=YYYY-MM-DD` |
+| `GET` | `/api/reports/monthly` | Relatório consolidado de receita mensal | Público* | `?year=YYYY&month=MM` |
+
+> **\* Sistema interno (Nível 1):** As rotas marcadas como "Público" operam sem `authMiddleware` por decisão de design do Nível 1 — o sistema é concebido para uso em rede local ou Docker privado (Pedro e Maria no mesmo estabelecimento). Em uma evolução para Nível 2, todas as rotas de escrita receberiam guard de autenticação.
 
 ---
 

@@ -23,7 +23,19 @@ app.use(express.json());
 app.use(requestLoggerMiddleware);
 
 // Seguranca HTTP
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // necessario para Swagger UI
+        styleSrc: ["'self'", "'unsafe-inline'"],  // necessario para Swagger UI
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+      },
+    },
+  })
+);
 app.use(cors({ origin: process.env['CORS_ORIGIN']?.split(',') ?? '*' }));
 
 // Limitador de Taxa de Requisicoes
@@ -52,7 +64,11 @@ const swaggerOptions: swaggerJsdoc.Options = {
       },
     ],
   },
-  apis: ['./src/infrastructure/http/routes/*.ts'],
+  apis: [
+    process.env['NODE_ENV'] === 'production'
+      ? './dist/infrastructure/http/routes/*.js'
+      : './src/infrastructure/http/routes/*.ts',
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);

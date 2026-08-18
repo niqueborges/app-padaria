@@ -1,4 +1,5 @@
 import type { PrismaClient } from '../../../generated/prisma/client.js';
+import { Prisma } from '../../../generated/prisma/client.js';
 import { Product } from '../../../domain/entities/product.entity.js';
 import type {
   ProductRepositoryPort,
@@ -99,8 +100,11 @@ export class PrismaProductRepository implements ProductRepositoryPort {
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       });
-    } catch {
-      return null;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        return null;
+      }
+      throw err;
     }
   }
 
@@ -110,8 +114,11 @@ export class PrismaProductRepository implements ProductRepositoryPort {
         where: { id },
       });
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        return false;
+      }
+      throw err;
     }
   }
 }

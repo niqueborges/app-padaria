@@ -17,7 +17,11 @@ describe('AuthService (Application)', () => {
     password: hashedPassword,
   });
 
+  const TEST_JWT_SECRET = 'test-secret-apenas-para-testes-unitarios';
+
   beforeEach(() => {
+    process.env['JWT_SECRET'] = TEST_JWT_SECRET;
+
     mockUserRepository = {
       create: jest.fn(),
       findByEmail: jest.fn(),
@@ -26,6 +30,10 @@ describe('AuthService (Application)', () => {
     };
 
     authService = new AuthService(mockUserRepository);
+  });
+
+  afterEach(() => {
+    delete process.env['JWT_SECRET'];
   });
 
   describe('login', () => {
@@ -73,7 +81,7 @@ describe('AuthService (Application)', () => {
     it('should decode and return token payload when token is valid', () => {
       const token = jwt.sign(
         { sub: 'user-1', name: 'Pedro', email: 'pedro@padaria.com' },
-        process.env['JWT_SECRET'] ?? 'dev-secret-change-in-prod'
+        process.env['JWT_SECRET'] as string
       );
 
       const payload = authService.validateToken(token);

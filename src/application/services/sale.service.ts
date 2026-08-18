@@ -34,7 +34,8 @@ export class SaleService {
       calculatedTotal += unitPrice * item.quantity;
 
       itemsToCreate.push({
-        productId: product.id ?? item.productId,
+        // product.id e garantido: produto foi buscado e validado como existente (Q3: tipar entidade persistida)
+        productId: product.id!,
         quantity: item.quantity,
         unitPrice,
       });
