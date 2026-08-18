@@ -1,17 +1,23 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import type { StringValue } from 'ms';
 import type { UserRepositoryPort } from '../ports/user.repository.port.js';
 import type { LoginInput, AuthResponseDTO, JwtPayload } from '../dto/auth.dto.js';
 import { UnauthorizedError } from '../../domain/errors/app-error.js';
 
 export class AuthService {
   private readonly jwtSecret: string;
-  private readonly expiresIn: jwt.SignOptions['expiresIn'];
+  private readonly expiresIn: StringValue;
 
   constructor(private readonly userRepository: UserRepositoryPort) {
-    this.jwtSecret = process.env['JWT_SECRET'] ?? 'dev-secret-change-in-prod';
-    this.expiresIn = (process.env['JWT_EXPIRES_IN'] ??
-      '8h') as unknown as jwt.SignOptions['expiresIn'];
+    const secret = process.env['JWT_SECRET'];
+    if (!secret) {
+      throw new Error(
+        'JWT_SECRET nao definido. Configure a variavel de ambiente antes de iniciar a aplicacao.'
+      );
+    }
+    this.jwtSecret = secret;
+    this.expiresIn = (process.env['JWT_EXPIRES_IN'] ?? '8h') as StringValue;
   }
 
   async login(input: LoginInput): Promise<AuthResponseDTO> {
